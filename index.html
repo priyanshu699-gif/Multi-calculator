@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MultiCalc — All-in-One Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #11151c;
+    --surface: #1a212c;
+    --surface-raised: #212935;
+    --line: #2b3543;
+    --amber: #f2a93b;
+    --amber-dim: #6b5226;
+    --teal: #4fd1c5;
+    --text: #e8eaed;
+    --text-dim: #8b95a5;
+    --danger: #e0654f;
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 18px 14px 40px;
+  }
+
+  .wrap{
+    width:100%;
+    max-width: 420px;
+  }
+
+  header{
+    text-align:center;
+    margin-bottom: 18px;
+  }
+
+  header .eyebrow{
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    font-weight: 600;
+  }
+
+  header h1{
+    margin: 4px 0 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  /* Tab bar */
+  .tabs{
+    display:flex;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 16px;
+    gap:4px;
+  }
+  .tab{
+    flex:1;
+    text-align:center;
+    padding: 10px 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-dim);
+    border-radius: 10px;
+    cursor:pointer;
+    transition: all .15s ease;
+    user-select:none;
+  }
+  .tab.active{
+    background: var(--amber);
+    color: #1a1304;
+  }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; animation: fade .18s ease; }
+  @keyframes fade{ from{opacity:0; transform:translateY(3px);} to{opacity:1; transform:translateY(0);} }
+
+  /* Display */
+  .display{
+    background: linear-gradient(180deg, #0c0f14, #0a0c10);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px 18px;
+    margin-bottom: 14px;
+    position:relative;
+    overflow:hidden;
+  }
+  .display::before{
+    content:'';
+    position:absolute; inset:0;
+    background: repeating-linear-gradient(0deg, rgba(242,169,59,0.025) 0px, rgba(242,169,59,0.025) 1px, transparent 1px, transparent 3px);
+    pointer-events:none;
+  }
+  .display .sub{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    min-height: 18px;
+    text-align:right;
+    word-break:break-all;
+  }
+  .display .main{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 38px;
+    font-weight: 600;
+    color: var(--amber);
+    text-align:right;
+    text-shadow: 0 0 18px rgba(242,169,59,0.35);
+    overflow-x:auto;
+    white-space:nowrap;
+    margin-top:6px;
+  }
+
+  /* Calculator grid */
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .key{
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 0;
+    text-align:center;
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--text);
+    cursor:pointer;
+    user-select:none;
+    transition: transform .08s ease, background .15s ease;
+  }
+  .key:active{ transform: scale(0.95); background: var(--line); }
+  .key.op{ color: var(--amber); }
+  .key.fn{ color: var(--teal); font-size:15px; }
+  .key.eq{ background: var(--amber); color:#1a1304; grid-row: span 1; }
+  .key.zero{ grid-column: span 2; }
+
+  /* Converter rows */
+  .field-label{
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 14px 0 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .row{
+    display:flex;
+    gap:10px;
+  }
+  input[type="number"], select{
+    width:100%;
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 13px 12px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-family:'Inter', sans-serif;
+    outline:none;
+  }
+  input[type="number"]:focus, select:focus{ border-color: var(--amber); }
+  select{ appearance:none; }
+
+  .swap-btn{
+    width:100%;
+    margin-top:14px;
+    padding: 13px;
+    text-align:center;
+    background: transparent;
+    border: 1px solid var(--amber-dim);
+    color: var(--amber);
+    border-radius: 10px;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .swap-btn:active{ background: rgba(242,169,59,0.08); }
+
+  .result-card{
+    margin-top: 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--teal);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .result-card .label{
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+  }
+  .result-card .value{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 22px;
+    color: var(--teal);
+    margin-top: 4px;
+    word-break: break-all;
+  }
+
+  .note{
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 12px;
+    line-height: 1.5;
+  }
+  .error{ color: var(--danger); }
+
+  .status-dot{
+    display:inline-block;
+    width:7px; height:7px;
+    border-radius:50%;
+    background: var(--text-dim);
+    margin-right:6px;
+  }
+  .status-dot.live{ background: var(--teal); box-shadow:0 0 6px var(--teal); }
+  .status-dot.down{ background: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Measure · Convert · Calculate</div>
+    <h1>MultiCalc</h1>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="calc">Calc</div>
+    <div class="tab" data-tab="length">Length</div>
+    <div class="tab" data-tab="weight">Weight</div>
+    <div class="tab" data-tab="currency">Currency</div>
+  </div>
+
+  <!-- CALCULATOR -->
+  <div class="panel active" id="panel-calc">
+    <div class="display">
+      <div class="sub" id="calcSub">&nbsp;</div>
+      <div class="main" id="calcMain">0</div>
+    </div>
+    <div class="grid">
+      <div class="key fn" data-act="clear">C</div>
+      <div class="key fn" data-act="back">⌫</div>
+      <div class="key fn" data-act="square">x²</div>
+      <div class="key op" data-act="op" data-val="÷">÷</div>
+
+      <div class="key" data-act="num" data-val="7">7</div>
+      <div class="key" data-act="num" data-val="8">8</div>
+      <div class="key" data-act="num" data-val="9">9</div>
+      <div class="key op" data-act="op" data-val="×">×</div>
+
+      <div class="key" data-act="num" data-val="4">4</div>
+      <div class="key" data-act="num" data-val="5">5</div>
+      <div class="key" data-act="num" data-val="6">6</div>
+      <div class="key op" data-act="op" data-val="−">−</div>
+
+      <div class="key" data-act="num" data-val="1">1</div>
+      <div class="key" data-act="num" data-val="2">2</div>
+      <div class="key" data-act="num" data-val="3">3</div>
+      <div class="key op" data-act="op" data-val="+">+</div>
+
+      <div class="key zero" data-act="num" data-val="0">0</div>
+      <div class="key" data-act="dot">.</div>
+      <div class="key eq" data-act="eq">=</div>
+    </div>
+  </div>
+
+  <!-- LENGTH / HEIGHT / DEPTH -->
+  <div class="panel" id="panel-length">
+    <div class="field-label">Value</div>
+    <input type="number" id="lenValue" placeholder="Enter value" inputmode="decimal">
+
+    <div class="row">
+      <div style="flex:1">
+        <div class="field-label">From</div>
+        <select id="lenFrom">
+          <option value="0.001">Millimetre (mm)</option>
+          <option value="0.01">Centimetre (cm)</option>
+          <option value="1" selected>Metre (m)</option>
+          <option value="1000">Kilometre (km)</option>
+          <option value="0.0254">Inch</option>
+          <option value="0.3048">Foot</option>
+          <option value="0.9144">Yard</option>
+          <option value="1609.34">Mile</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <div class="field-label">To</div>
+        <select id="lenTo">
+          <option value="0.001">Millimetre (mm)</option>
+          <option value="0.01">Centimetre (cm)</option>
+          <option value="1">Metre (m)</option>
+          <option value="1000">Kilometre (km)</option>
+          <option value="0.0254" selected>Inch</option>
+          <option value="0.3048">Foot</option>
+          <option value="0.9144">Yard</option>
+          <option value="1609.34">Mile</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="swap-btn" id="lenSwap">↑↓ Swap units</div>
+
+    <div class="result-card">
+      <div class="label">Result</div>
+      <div class="value" id="lenResult">—</div>
+    </div>
+    <div class="note">Works for height, depth, distance — any length measurement, same units.</div>
+  </div>
+
+  <!-- WEIGHT -->
+  <div class="panel" id="panel-weight">
+    <div class="field-label">Value</div>
+    <input type="number" id="wtValue" placeholder="Enter value" inputmode="decimal">
+
+    <div class="row">
+      <div style="flex:1">
+        <div class="field-label">From</div>
+        <select id="wtFrom">
+          <option value="0.000001">Milligram (mg)</option>
+          <option value="0.001">Gram (g)</option>
+          <option value="1" selected>Kilogram (kg)</option>
+          <option value="1000">Metric Ton</option>
+          <option value="0.0283495">Ounce (oz)</option>
+          <option value="0.453592">Pound (lb)</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <div class="field-label">To</div>
+        <select id="wtTo">
+          <option value="0.000001">Milligram (mg)</option>
+          <option value="0.001">Gram (g)</option>
+          <option value="1">Kilogram (kg)</option>
+          <option value="1000">Metric Ton</option>
+          <option value="0.0283495">Ounce (oz)</option>
+          <option value="0.453592" selected>Pound (lb)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="swap-btn" id="wtSwap">↑↓ Swap units</div>
+
+    <div class="result-card">
+      <div class="label">Result</div>
+      <div class="value" id="wtResult">—</div>
+    </div>
+  </div>
+
+  <!-- CURRENCY -->
+  <div class="panel" id="panel-currency">
+    <div class="field-label">Amount</div>
+    <input type="number" id="curValue" placeholder="Enter amount" inputmode="decimal">
+
+    <div class="row">
+      <div style="flex:1">
+        <div class="field-label">From</div>
+        <select id="curFrom">
+          <option value="INR" selected>INR — Rupee</option>
+          <option value="USD">USD — Dollar</option>
+          <option value="EUR">EUR — Euro</option>
+          <option value="GBP">GBP — Pound</option>
+          <option value="AED">AED — Dirham</option>
+          <option value="JPY">JPY — Yen</option>
+          <option value="AUD">AUD — Aus. Dollar</option>
+          <option value="CAD">CAD — Can. Dollar</option>
+          <option value="SGD">SGD — Singapore $</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <div class="field-label">To</div>
+        <select id="curTo">
+          <option value="INR">INR — Rupee</option>
+          <option value="USD" selected>USD — Dollar</option>
+          <option value="EUR">EUR — Euro</option>
+          <option value="GBP">GBP — Pound</option>
+          <option value="AED">AED — Dirham</option>
+          <option value="JPY">JPY — Yen</option>
+          <option value="AUD">AUD — Aus. Dollar</option>
+          <option value="CAD">CAD — Can. Dollar</option>
+          <option value="SGD">SGD — Singapore $</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="swap-btn" id="curSwap">↑↓ Swap currencies</div>
+
+    <div class="result-card">
+      <div class="label"><span class="status-dot" id="curStatusDot"></span><span id="curStatusText">Checking connection…</span></div>
+      <div class="value" id="curResult">—</div>
+    </div>
+    <div class="note">Needs internet — pulls live exchange rates. If it can't connect, check your data/Wi-Fi and reopen this screen.</div>
+  </div>
+
+</div>
+
+<script>
+  // ---------- TAB SWITCHING ----------
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---------- CALCULATOR ----------
+  let calcExpr = '';
+  let calcLast = null;
+
+  const calcMain = document.getElementById('calcMain');
+  const calcSub = document.getElementById('calcSub');
+
+  function calcRender(){
+    calcMain.textContent = calcExpr === '' ? '0' : calcExpr.slice(-14);
+  }
+
+  document.querySelectorAll('#panel-calc .key').forEach(key=>{
+    key.addEventListener('click', ()=>{
+      const act = key.dataset.act;
+      if(act === 'num'){
+        calcExpr += key.dataset.val;
+        calcRender();
+      } else if(act === 'dot'){
+        const parts = calcExpr.split(/[+\-×÷]/);
+        if(!parts[parts.length-1].includes('.')) calcExpr += '.';
+        calcRender();
+      } else if(act === 'op'){
+        if(calcExpr === '') return;
+        const lastChar = calcExpr.slice(-1);
+        if(['+','−','×','÷'].includes(lastChar)){
+          calcExpr = calcExpr.slice(0,-1) + key.dataset.val;
+        } else {
+          calcExpr += key.dataset.val;
+        }
+        calcRender();
+      } else if(act === 'square'){
+        try{
+          const val = evalExpr(calcExpr || calcMain.textContent);
+          calcSub.textContent = calcExpr + ' (squared)';
+          calcExpr = String(val * val);
+          calcRender();
+        }catch(e){ calcMain.textContent = 'Error'; }
+      } else if(act === 'clear'){
+        calcExpr = '';
+        calcSub.textContent = '\u00a0';
+        calcRender();
+      } else if(act === 'back'){
+        calcExpr = calcExpr.slice(0,-1);
+        calcRender();
+      } else if(act === 'eq'){
+        try{
+          calcSub.textContent = calcExpr;
+          const val = evalExpr(calcExpr);
+          calcExpr = String(val);
+          calcRender();
+        }catch(e){
+          calcMain.textContent = 'Error';
+        }
+      }
+    });
+  });
+
+  function evalExpr(expr){
+    const safe = expr.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-');
+    if(!/^[0-9+\-*/.]+$/.test(safe)) throw new Error('bad expr');
+    // eslint-disable-next-line no-eval
+    const result = Function('"use strict"; return (' + safe + ')')();
+    if(!isFinite(result)) throw new Error('inf');
+    return Math.round(result * 1e8) / 1e8;
+  }
+
+  // ---------- LENGTH CONVERTER ----------
+  function setupConverter(prefix){
+    const valueEl = document.getElementById(prefix+'Value');
+    const fromEl = document.getElementById(prefix+'From');
+    const toEl = document.getElementById(prefix+'To');
+    const resultEl = document.getElementById(prefix+'Result');
+    const swapEl = document.getElementById(prefix+'Swap');
+
+    function compute(){
+      const v = parseFloat(valueEl.value);
+      if(isNaN(v)){ resultEl.textContent = '—'; return; }
+      const fromFactor = parseFloat(fromEl.value);
+      const toFactor = parseFloat(toEl.value);
+      const result = (v * fromFactor) / toFactor;
+      resultEl.textContent = (Math.round(result * 1e6) / 1e6).toLocaleString();
+    }
+
+    valueEl.addEventListener('input', compute);
+    fromEl.addEventListener('change', compute);
+    toEl.addEventListener('change', compute);
+    swapEl.addEventListener('click', ()=>{
+      const tmp = fromEl.value;
+      fromEl.value = toEl.value;
+      toEl.value = tmp;
+      const tmpIdx = fromEl.selectedIndex;
+      fromEl.selectedIndex = toEl.selectedIndex;
+      toEl.selectedIndex = tmpIdx;
+      compute();
+    });
+  }
+  setupConverter('len');
+  setupConverter('wt');
+
+  // ---------- CURRENCY CONVERTER (live API) ----------
+  let rates = null;
+  const curDot = document.getElementById('curStatusDot');
+  const curStatusText = document.getElementById('curStatusText');
+  const curResult = document.getElementById('curResult');
+
+  async function loadRates(base){
+    curStatusText.textContent = 'Fetching latest rates…';
+    curDot.className = 'status-dot';
+    try{
+      const res = await fetch('https://open.er-api.com/v6/latest/' + base);
+      const data = await res.json();
+      if(data.result !== 'success') throw new Error('api error');
+      rates = data.rates;
+      curDot.className = 'status-dot live';
+      curStatusText.textContent = 'Live rates connected';
+      curCompute();
+    }catch(e){
+      curDot.className = 'status-dot down';
+      curStatusText.textContent = "Couldn't fetch rates — check your internet connection.";
+      curResult.textContent = '—';
+    }
+  }
+
+  function curCompute(){
+    const v = parseFloat(document.getElementById('curValue').value);
+    const to = document.getElementById('curTo').value;
+    if(isNaN(v) || !rates || !rates[to]){ curResult.textContent = '—'; return; }
+    const result = v * rates[to];
+    curResult.textContent = (Math.round(result * 100) / 100).toLocaleString();
+  }
+
+  document.getElementById('curFrom').addEventListener('change', (e)=> loadRates(e.target.value));
+  document.getElementById('curTo').addEventListener('change', curCompute);
+  document.getElementById('curValue').addEventListener('input', curCompute);
+  document.getElementById('curSwap').addEventListener('click', ()=>{
+    const fromEl = document.getElementById('curFrom');
+    const toEl = document.getElementById('curTo');
+    const tmpIdx = fromEl.selectedIndex;
+    fromEl.selectedIndex = toEl.selectedIndex;
+    toEl.selectedIndex = tmpIdx;
+    loadRates(fromEl.value);
+  });
+
+  // load default rates on first open of currency tab
+  document.querySelector('[data-tab="currency"]').addEventListener('click', ()=>{
+    if(!rates) loadRates(document.getElementById('curFrom').value);
+  }, { once:true });
+</script>
+
+</body>
+      </html>
+        
